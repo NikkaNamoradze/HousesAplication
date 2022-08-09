@@ -50,6 +50,7 @@ class HousesFragment : Fragment() {
     private fun refresh(){
         binding.swipeRefresh.setOnRefreshListener {
             viewModel.getHousesData()
+            getDataFromApi()
             binding.swipeRefresh.isRefreshing = false
         }
     }
@@ -57,13 +58,18 @@ class HousesFragment : Fragment() {
 
     private fun getDataFromApi() {
         viewModel.getHousesData()
-
+        binding.swipeRefresh.isRefreshing = true
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.newsState.collect {
                     when(it){
-                        is ApiResponseHandler.Success -> setUpRecycler(it.data)
-                        is ApiResponseHandler.Failure -> errorToastMaker()
+                        is ApiResponseHandler.Success -> {
+                            setUpRecycler(it.data)
+                            binding.swipeRefresh.isRefreshing = false}
+                        is ApiResponseHandler.Failure -> {
+                            errorToastMaker()
+                            binding.swipeRefresh.isRefreshing = false
+                        }
                         else -> {}
                     }
                 }
