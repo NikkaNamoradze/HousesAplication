@@ -2,12 +2,12 @@ package com.example.sellhousesinfo.ui
 
 
 import android.os.Bundle
-import android.util.Log.d
 
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -16,10 +16,9 @@ import com.example.sellhousesinfo.adapter.HousesRecyclerAdapter
 
 import com.example.sellhousesinfo.databinding.HousesFragmentBinding
 import com.example.sellhousesinfo.model.Content
-import kotlinx.coroutines.Dispatchers
+import com.example.sellhousesinfo.responsehandling.ApiResponseHandler
 
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 
 class HousesFragment : Fragment() {
@@ -45,8 +44,16 @@ class HousesFragment : Fragment() {
 
     private fun init() {
         getDataFromApi()
-        setUpRecycler()
+        refresh()
     }
+
+    private fun refresh(){
+        binding.swipeRefresh.setOnRefreshListener {
+            viewModel.getHousesData()
+            binding.swipeRefresh.isRefreshing = false
+        }
+    }
+
 
     private fun getDataFromApi() {
         viewModel.getHousesData()
@@ -54,16 +61,25 @@ class HousesFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.newsState.collect {
-                    housesAdapter.setData(it)
-//                  d("list", "$it")
+                    when(it){
+                        is ApiResponseHandler.Success -> setUpRecycler(it.data)
+                        is ApiResponseHandler.Failure -> errorToastMaker()
+                        else -> {}
+                    }
                 }
             }
         }
     }
 
-    private fun setUpRecycler() {
+    private fun setUpRecycler(housesData: List<Content>?) {
         binding.housesRecycler.adapter = housesAdapter
+        housesData?.let { housesAdapter.setData(it) }
     }
+
+    private fun errorToastMaker(){
+        Toast.makeText(context, "error occurred", Toast.LENGTH_SHORT).show()
+    }
+
 
     override fun onDestroy() {
         super.onDestroy()
